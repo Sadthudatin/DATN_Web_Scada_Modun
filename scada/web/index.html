@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="Bảng giám sát bus Modbus của gateway DVP24 cho PLC Delta DVP-24ES2.">
+  <title>DVP24 Gateway · Tổng quan</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 20 20" aria-hidden="true">
+        <rect x="1.5" y="3.5" width="11" height="13" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/>
+        <path d="M4.5 7h5M4.5 10h5M4.5 13h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+        <path d="M14 8.5h2.2l1.3-2.4 1.4 6 1.1-3.6H20" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round" transform="translate(-1.2 0)"/>
+      </svg>
+      <span class="brand-name">DVP24 <em>Gateway</em></span>
+    </div>
+    <span class="scope" id="scopeChip">—</span>
+    <span class="topbar-spacer"></span>
+    <span class="pill pill-connecting" id="connBadge">
+      <span class="dot" aria-hidden="true"></span>
+      <span id="connText">CONNECTING</span>
+    </span>
+  </header>
+
+  <main class="canvas">
+    <div class="title-row">
+      <div class="title-main">
+        <h1>Tổng quan</h1>
+        <p class="subline" id="finding">Đang chờ gói telemetry đầu tiên từ gateway.</p>
+      </div>
+      <div class="title-side">
+        <span class="stamp">Cập nhật <span id="ageValue" class="num">—</span></span>
+        <button type="button" class="btn btn-ghost" id="refreshBtn">Làm mới</button>
+        <a class="btn" id="csvBtn" href="#" download hidden>Tải CSV</a>
+      </div>
+    </div>
+
+    <section class="fleet" aria-label="Mạch theo dõi">
+      <span class="fleet-label">Mạch theo dõi <span class="num" id="fleetCount">0</span></span>
+      <div class="fleet-list" id="fleetList"></div>
+      <button type="button" class="btn btn-add" id="addDeviceBtn"><span aria-hidden="true">+</span> Thêm mạch</button>
+    </section>
+
+    <section class="kpi-strip" aria-label="Chỉ số bus">
+      <div class="kpi kpi-lead">
+        <span class="kpi-label">Nhịp gói</span>
+        <span class="kpi-value"><span id="kpiInterval" class="num">—</span><span class="unit">ms</span></span>
+      </div>
+      <div class="kpi">
+        <span class="kpi-label">Mất gói · 120 gói</span>
+        <span class="kpi-value"><span id="kpiMissed" class="num">—</span></span>
+      </div>
+      <div class="kpi">
+        <span class="kpi-label">Lệnh lỗi</span>
+        <span class="kpi-value"><span id="kpiErrors" class="num">0</span></span>
+      </div>
+      <div class="kpi">
+        <span class="kpi-label">Bản ghi</span>
+        <span class="kpi-value"><span id="seqValue" class="num">—</span></span>
+      </div>
+    </section>
+
+    <div class="grid">
+      <section class="panel panel-scan" aria-labelledby="scanTitle">
+        <div class="panel-head">
+          <h2 id="scanTitle">Đường quét</h2>
+          <span class="panel-meta" id="sparkStat">—</span>
+        </div>
+        <div class="chart-wrap" id="sparkWrap">
+          <canvas id="spark" role="img" aria-label="Khoảng cách giữa các gói telemetry, 120 gói gần nhất"></canvas>
+        </div>
+        <div class="scan-strip" id="scanStrip" aria-hidden="true"></div>
+        <div class="scan-legend">
+          <span class="legend-item"><span class="swatch swatch-ok"></span>đúng nhịp</span>
+          <span class="legend-item"><span class="swatch swatch-late"></span>trễ</span>
+          <span class="legend-item"><span class="swatch swatch-miss"></span>mất gói</span>
+          <span class="legend-item legend-ref" id="legendTarget">mục tiêu 300 ms</span>
+        </div>
+      </section>
+
+      <section class="panel panel-link" aria-labelledby="linkTitle">
+        <div class="panel-head">
+          <h2 id="linkTitle">Liên kết</h2>
+          <span class="pill pill-unknown" id="qualityBadge"><span class="dot" aria-hidden="true"></span><span id="qualityText">—</span></span>
+        </div>
+        <dl class="kv">
+          <div><dt>Tên trạm</dt><dd id="deviceName">—</dd></div>
+          <div><dt>Trạng thái</dt><dd><span class="pill pill-unknown" id="deviceBadge"><span class="dot" aria-hidden="true"></span><span id="deviceText">—</span></span></dd></div>
+          <div><dt>Modbus</dt><dd class="num" id="deviceModbus">—</dd></div>
+          <div><dt>Chu kỳ</dt><dd class="num" id="deviceCycle">—</dd></div>
+        </dl>
+        <p class="kv-sep">Thanh ghi</p>
+        <dl class="kv kv-figures">
+          <div><dt>D100</dt><dd class="num" id="d100Value">—</dd></div>
+          <div><dt>D101</dt><dd class="num" id="d101Value">—</dd></div>
+          <div><dt>D102</dt><dd class="num" id="d102Value">—</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel panel-x" aria-labelledby="xTitle">
+        <div class="panel-head">
+          <h2 id="xTitle">Đầu vào · X</h2>
+          <span class="panel-meta">chỉ đọc</span>
+        </div>
+        <div class="led-grid" id="xGrid">
+          <div class="led-unit" data-key="X0"><span class="led" data-role="led" aria-hidden="true"></span><span class="led-label">X0</span><span class="led-val num" data-role="val">0</span></div>
+          <div class="led-unit" data-key="X1"><span class="led" data-role="led" aria-hidden="true"></span><span class="led-label">X1</span><span class="led-val num" data-role="val">0</span></div>
+          <div class="led-unit" data-key="X2"><span class="led" data-role="led" aria-hidden="true"></span><span class="led-label">X2</span><span class="led-val num" data-role="val">0</span></div>
+          <div class="led-unit" data-key="X3"><span class="led" data-role="led" aria-hidden="true"></span><span class="led-label">X3</span><span class="led-val num" data-role="val">0</span></div>
+          <div class="led-unit" data-key="X4"><span class="led" data-role="led" aria-hidden="true"></span><span class="led-label">X4</span><span class="led-val num" data-role="val">0</span></div>
+          <div class="led-unit" data-key="X5"><span class="led" data-role="led" aria-hidden="true"></span><span class="led-label">X5</span><span class="led-val num" data-role="val">0</span></div>
+          <div class="led-unit" data-key="X6"><span class="led" data-role="led" aria-hidden="true"></span><span class="led-label">X6</span><span class="led-val num" data-role="val">0</span></div>
+          <div class="led-unit" data-key="X7"><span class="led" data-role="led" aria-hidden="true"></span><span class="led-label">X7</span><span class="led-val num" data-role="val">0</span></div>
+        </div>
+      </section>
+
+      <section class="panel panel-m" aria-labelledby="mTitle">
+        <div class="panel-head">
+          <h2 id="mTitle">Cờ nội · M</h2>
+          <span class="panel-meta">trạng thái</span>
+        </div>
+        <div class="led-grid" id="mGrid">
+          <div class="led-unit" data-key="M0"><span class="led" data-role="led" aria-hidden="true"></span><span class="led-label">M0</span><span class="led-val num" data-role="val">0</span></div>
+          <div class="led-unit" data-key="M1"><span class="led" data-role="led" aria-hidden="true"></span><span class="led-label">M1</span><span class="led-val num" data-role="val">0</span></div>
+          <div class="led-unit" data-key="M2"><span class="led" data-role="led" aria-hidden="true"></span><span class="led-label">M2</span><span class="led-val num" data-role="val">0</span></div>
+          <div class="led-unit" data-key="M3"><span class="led" data-role="led" aria-hidden="true"></span><span class="led-label">M3</span><span class="led-val num" data-role="val">0</span></div>
+        </div>
+      </section>
+
+      <section class="panel panel-y" aria-labelledby="yTitle">
+        <div class="panel-head">
+          <h2 id="yTitle">Đầu ra · Y</h2>
+          <span class="panel-meta">bấm để ghi</span>
+        </div>
+        <div class="led-grid" id="yGrid">
+          <button type="button" class="led-unit pad" data-key="Y0" aria-pressed="false" aria-label="Đảo trạng thái Y0"><span class="led" data-role="led" aria-hidden="true"></span><span class="led-label">Y0</span><span class="led-val num" data-role="val">0</span></button>
+          <button type="button" class="led-unit pad" data-key="Y1" aria-pressed="false" aria-label="Đảo trạng thái Y1"><span class="led" data-role="led" aria-hidden="true"></span><span class="led-label">Y1</span><span class="led-val num" data-role="val">0</span></button>
+          <button type="button" class="led-unit pad" data-key="Y2" aria-pressed="false" aria-label="Đảo trạng thái Y2"><span class="led" data-role="led" aria-hidden="true"></span><span class="led-label">Y2</span><span class="led-val num" data-role="val">0</span></button>
+          <button type="button" class="led-unit pad" data-key="Y3" aria-pressed="false" aria-label="Đảo trạng thái Y3"><span class="led" data-role="led" aria-hidden="true"></span><span class="led-label">Y3</span><span class="led-val num" data-role="val">0</span></button>
+          <button type="button" class="led-unit pad" data-key="Y4" aria-pressed="false" aria-label="Đảo trạng thái Y4"><span class="led" data-role="led" aria-hidden="true"></span><span class="led-label">Y4</span><span class="led-val num" data-role="val">0</span></button>
+          <button type="button" class="led-unit pad" data-key="Y5" aria-pressed="false" aria-label="Đảo trạng thái Y5"><span class="led" data-role="led" aria-hidden="true"></span><span class="led-label">Y5</span><span class="led-val num" data-role="val">0</span></button>
+          <button type="button" class="led-unit pad" data-key="Y6" aria-pressed="false" aria-label="Đảo trạng thái Y6"><span class="led" data-role="led" aria-hidden="true"></span><span class="led-label">Y6</span><span class="led-val num" data-role="val">0</span></button>
+          <button type="button" class="led-unit pad" data-key="Y7" aria-pressed="false" aria-label="Đảo trạng thái Y7"><span class="led" data-role="led" aria-hidden="true"></span><span class="led-label">Y7</span><span class="led-val num" data-role="val">0</span></button>
+        </div>
+      </section>
+
+      <section class="panel panel-log" aria-labelledby="logTitle">
+        <div class="panel-head">
+          <h2 id="logTitle">Nhật ký</h2>
+          <span class="panel-tools">
+            <span class="panel-meta">20 dòng gần nhất</span>
+            <button type="button" class="link-btn" id="exportLogBtn">Xuất CSV</button>
+          </span>
+        </div>
+        <div class="log-body">
+          <ol class="log-list" id="logList" aria-live="polite" aria-relevant="additions"></ol>
+          <p class="log-empty" id="logEmpty">Chưa có sự kiện</p>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <dialog class="dialog" id="addDialog" aria-labelledby="addTitle">
+    <form class="dialog-form" id="addForm" novalidate>
+      <div class="dialog-head">
+        <h2 id="addTitle">Thêm mạch theo dõi</h2>
+        <button type="button" class="icon-btn" id="addClose" aria-label="Đóng">&times;</button>
+      </div>
+      <p class="dialog-note">Cấu hình lưu retained trên broker — mọi máy khách SCADA nhận được mạch mới ngay.</p>
+      <div class="field">
+        <label for="addId">Mã mạch</label>
+        <input id="addId" name="id" type="text" required maxlength="24" pattern="[a-z0-9](?:[a-z0-9-]{1,22}[a-z0-9])?" placeholder="dvp24-07" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="field">
+        <label for="addName">Tên trạm</label>
+        <input id="addName" name="name" type="text" maxlength="32" placeholder="Trạm xử lý nước" autocomplete="off">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="addSlave">Địa chỉ Modbus</label>
+          <input id="addSlave" name="slave" type="number" min="1" max="247" value="1" required>
+        </div>
+        <div class="field">
+          <label for="addCycle">Chu kỳ quét</label>
+          <select id="addCycle" name="cycle">
+            <option value="100">100 ms</option>
+            <option value="200">200 ms</option>
+            <option value="300" selected>300 ms</option>
+            <option value="500">500 ms</option>
+            <option value="1000">1000 ms</option>
+            <option value="2000">2000 ms</option>
+          </select>
+        </div>
+      </div>
+      <p class="dialog-error" id="addError" hidden></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-ghost" id="addCancel">Hủy</button>
+        <button type="submit" class="btn btn-primary">Thêm mạch</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="config.js"></script>
+  <script src="vendor/mqtt.min.js" onerror="window.__mqttLoadFailed = true"></script>
+  <script src="app.js"></script>
+</body>
+</html>

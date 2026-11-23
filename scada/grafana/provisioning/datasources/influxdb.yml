@@ -1,0 +1,16 @@
+apiVersion: 1
+
+datasources:
+  - name: InfluxDB-PLC
+    uid: influxdb-plc
+    type: influxdb
+    access: proxy
+    url: http://influxdb:8086
+    isDefault: true
+    editable: true
+    jsonData:
+      version: Flux
+      organization: datn
+      defaultBucket: plc
+    secureJsonData:
+      token: datn-token-0123456789abcdef0123456789abcdef

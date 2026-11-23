@@ -1,0 +1,100 @@
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: webscada-mosquitto
+    restart: unless-stopped
+    ports:
+      - "1884:1883"
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto-data:/mosquitto/data
+    networks: [webscada]
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: webscada-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: webscada
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d webscada"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [webscada]
+
+  influxdb:
+    image: influxdb:2.7
+    container_name: webscada-influxdb
+    restart: unless-stopped
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: admin
+      DOCKER_INFLUXDB_INIT_PASSWORD: Admin123!
+      DOCKER_INFLUXDB_INIT_ORG: datn
+      DOCKER_INFLUXDB_INIT_BUCKET: telemetry
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: dev-influx-token
+    ports:
+      - "8087:8086"
+    volumes:
+      - influxdb-data:/var/lib/influxdb2
+    networks: [webscada]
+
+  control-api:
+    build:
+      context: ../control-csharp
+      dockerfile: src/Control.Api/Dockerfile
+    container_name: webscada-control-api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Default: Host=postgres;Port=5432;Database=webscada;Username=postgres;Password=postgres
+      Mqtt__Host: mosquitto
+      Mqtt__Port: 1883
+      Mqtt__ClientId: control-service
+      Influx__Enabled: "true"
+      Influx__Url: http://influxdb:8086
+      Influx__Token: dev-influx-token
+      Influx__Org: datn
+      Influx__Bucket: telemetry
+      Jwt__Key: dev-only-change-me-please-32chars-minimum
+      Admin__Username: admin
+      Admin__Password: Admin123!
+    ports:
+      - "5081:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mosquitto:
+        condition: service_started
+      influxdb:
+        condition: service_started
+    networks: [webscada]
+
+  web:
+    build:
+      context: ../web-scada
+      dockerfile: Dockerfile
+    container_name: webscada-web
+    restart: unless-stopped
+    ports:
+      - "5080:80"
+    depends_on:
+      - control-api
+    networks: [webscada]
+
+volumes:
+  postgres-data:
+  influxdb-data:
+  mosquitto-data:
+
+networks:
+  webscada:
+    name: webscada

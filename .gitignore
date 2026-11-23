@@ -1,0 +1,44 @@
+# Build output
+**/bin/
+**/obj/
+**/TestResults/
+**/node_modules/
+web-scada/dist/
+web-scada/*.png
+tools/dev-broker/*.log
+tools/dev-broker/*.err
+
+# Firmware (ESP-IDF) build artifacts
+firmware/build/
+firmware/sdkconfig
+firmware/sdkconfig.old
+firmware/dependencies.lock
+firmware/managed_components/
+
+# Local runtime data
+control-csharp/*.db
+control-csharp/*.log
+control-csharp/*.err
+web-scada/*.log
+web-scada/*.err
+.env
+deploy/.env
+
+# Legacy SCADA runtime data
+scada/influxdb/
+scada/logs/
+scada/grafana-data/
+scada/mosquitto/data/
+scada/mosquitto/log/
+scada/**/*.db
+scada/**/*.log
+
+# IDE
+.vs/
+.vscode/
+*.user
+*.suo
+
+# OS
+.DS_Store
+Thumbs.db

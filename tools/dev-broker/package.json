@@ -1,0 +1,11 @@
+{
+  "name": "dev-broker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "aedes": "^0.51.3"
+  }
+}

@@ -1,0 +1,24 @@
+idf_component_register(
+    SRCS
+        "app_main.c"
+        "modbus_rtu.c"
+        "mqtt_gateway.c"
+        "store_forward.c"
+        "quality_cov.c"
+        "tag_map.c"
+        "prog_bridge.c"
+    INCLUDE_DIRS "."
+    REQUIRES
+        driver
+        esp_wifi
+        esp_netif
+        esp_event
+        esp_eth
+        mqtt
+        json
+        nvs_flash
+        fatfs
+        wear_levelling
+        esp_timer
+        lwip
+)

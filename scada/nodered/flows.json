@@ -1,0 +1,309 @@
+[
+  {
+    "id": "f1",
+    "type": "tab",
+    "label": "SCADA Simulator",
+    "disabled": false,
+    "info": "Mô phỏng nhiều mạch DVP24. Mỗi mạch có topic riêng: plc/<id>/telemetry, /cmd, /ack, /status và config retained plc/<id>/config. Historian ghi telemetry ra /logs/telemetry-YYYY-MM-DD-HH.csv."
+  },
+  {
+    "id": "b1",
+    "type": "mqtt-broker",
+    "name": "local",
+    "broker": "mosquitto",
+    "port": "1883",
+    "clientid": "nodered",
+    "autoConnect": true,
+    "usetls": false,
+    "protocolVersion": "4",
+    "keepalive": "60",
+    "cleansession": true,
+    "birthTopic": "",
+    "birthQos": "0",
+    "birthRetain": "false",
+    "birthPayload": "",
+    "closeTopic": "",
+    "closeQos": "0",
+    "closeRetain": "false",
+    "closePayload": "",
+    "willTopic": "",
+    "willQos": "0",
+    "willRetain": "false",
+    "willPayload": "",
+    "credentials": {
+      "user": "nodered",
+      "password": "nr-pass-2026"
+    }
+  },
+  {
+    "id": "si1",
+    "type": "inject",
+    "z": "f1",
+    "name": "seed fleet",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "1.5",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 110,
+    "y": 60,
+    "wires": [
+      [
+        "fnSeed"
+      ]
+    ]
+  },
+  {
+    "id": "fnSeed",
+    "type": "function",
+    "z": "f1",
+    "name": "default configs",
+    "func": "const fleet = [\n  { id: \"dvp24-01\", name: \"Trạm nghiền\", slave: 1 },\n  { id: \"dvp24-02\", name: \"Trạm trộn\", slave: 2 },\n  { id: \"dvp24-03\", name: \"Băng tải chính\", slave: 3 },\n  { id: \"dvp24-04\", name: \"Máy nén khí\", slave: 4 },\n  { id: \"dvp24-05\", name: \"Trạm bơm nước\", slave: 5 },\n  { id: \"dvp24-06\", name: \"Tủ điện phụ\", slave: 6 }\n];\nreturn [fleet.map(function (d) {\n  return {\n    topic: \"plc/\" + d.id + \"/config\",\n    payload: { id: d.id, name: d.name, slave: d.slave, cycle: 300 },\n    qos: 1,\n    retain: true\n  };\n})];",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 320,
+    "y": 60,
+    "wires": [
+      [
+        "moC"
+      ]
+    ]
+  },
+  {
+    "id": "moC",
+    "type": "mqtt out",
+    "z": "f1",
+    "name": "publish config",
+    "topic": "",
+    "qos": "1",
+    "retain": "true",
+    "broker": "b1",
+    "x": 540,
+    "y": 60,
+    "wires": []
+  },
+  {
+    "id": "mciCfg",
+    "type": "mqtt in",
+    "z": "f1",
+    "name": "registry",
+    "topic": "plc/+/config",
+    "qos": "1",
+    "datatype": "auto",
+    "broker": "b1",
+    "x": 100,
+    "y": 140,
+    "wires": [
+      [
+        "fnCfg"
+      ]
+    ]
+  },
+  {
+    "id": "fnCfg",
+    "type": "function",
+    "z": "f1",
+    "name": "register device",
+    "func": "const id = (msg.topic || \"\").split(\"/\")[1];\nif (!id) return null;\nconst devs = flow.get(\"devices\") || {};\nlet raw = msg.payload;\nif (Buffer.isBuffer(raw)) raw = raw.toString();\nif (!raw || raw === \"\") {\n  delete devs[id];\n  flow.set(\"devices\", devs);\n  return [{ topic: \"plc/\" + id + \"/status\", payload: \"\", qos: 1, retain: true }];\n}\nlet cfg;\ntry { cfg = typeof raw === \"object\" ? raw : JSON.parse(raw); } catch (e) { return null; }\nif (!cfg || typeof cfg.id !== \"string\") return null;\ndevs[id] = {\n  id: id,\n  name: String(cfg.name || id).slice(0, 32),\n  slave: Number(cfg.slave) || 1,\n  cycle: Number(cfg.cycle) || 300\n};\nflow.set(\"devices\", devs);\nreturn [{ topic: \"plc/\" + id + \"/status\", payload: \"online\", qos: 1, retain: true }];",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 320,
+    "y": 140,
+    "wires": [
+      [
+        "moS"
+      ]
+    ]
+  },
+  {
+    "id": "moS",
+    "type": "mqtt out",
+    "z": "f1",
+    "name": "publish status",
+    "topic": "",
+    "qos": "1",
+    "retain": "true",
+    "broker": "b1",
+    "x": 540,
+    "y": 140,
+    "wires": []
+  },
+  {
+    "id": "i1",
+    "type": "inject",
+    "z": "f1",
+    "name": "100 ms",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "0.1",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "0.5",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 100,
+    "y": 220,
+    "wires": [
+      [
+        "fnTick"
+      ]
+    ]
+  },
+  {
+    "id": "fnTick",
+    "type": "function",
+    "z": "f1",
+    "name": "poll fleet",
+    "func": "const now = Date.now();\nconst tick = (context.get(\"tick\") || 0) + 1;\ncontext.set(\"tick\", tick);\nconst devs = flow.get(\"devices\") || {};\nconst out = [];\nfor (const id of Object.keys(devs)) {\n  const d = devs[id];\n  const cycle = Number(d.cycle) || 300;\n  const div = Math.max(1, Math.round(cycle / 100));\n  const phase = (Number(d.slave) || 1) % div;\n  if (tick % div !== phase) continue;\n  const t = now / 1000;\n  const s = Number(d.slave) || 1;\n  const ys = flow.get(\"y:\" + id) || {};\n  const seq = (flow.get(\"seq:\" + id) || 0) + 1;\n  flow.set(\"seq:\" + id, seq);\n  out.push({\n    topic: \"plc/\" + id + \"/telemetry\",\n    qos: 1,\n    payload: {\n      device: id,\n      ts: now,\n      seq: seq,\n      quality: \"GOOD\",\n      X0: (Math.floor(t) + s) % 4 === 0 ? 1 : 0,\n      X1: (Math.floor(t) + s) % 6 === 0 ? 1 : 0,\n      X2: 0,\n      X3: 1,\n      X4: 0,\n      X5: 0,\n      X6: 0,\n      X7: 0,\n      Y0: ys.Y0 ? 1 : 0,\n      Y1: ys.Y1 ? 1 : 0,\n      Y2: ys.Y2 ? 1 : 0,\n      Y3: ys.Y3 ? 1 : 0,\n      Y4: 0,\n      Y5: 0,\n      Y6: 0,\n      Y7: 0,\n      M0: 1,\n      M1: 0,\n      M2: 0,\n      M3: 0,\n      D100: 900 + s * 40 + Math.round(120 * Math.sin(t / 10 + s)),\n      D101: Math.round((20 + 2 * Math.sin(t / 7 + s) + s * 0.5) * 10) / 10,\n      D102: 400 + s * 10 + (Math.floor(t) % 100)\n    }\n  });\n}\nreturn out.length ? [out] : null;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 310,
+    "y": 220,
+    "wires": [
+      [
+        "moT"
+      ]
+    ]
+  },
+  {
+    "id": "moT",
+    "type": "mqtt out",
+    "z": "f1",
+    "name": "publish telemetry",
+    "topic": "",
+    "qos": "1",
+    "retain": "false",
+    "broker": "b1",
+    "x": 550,
+    "y": 220,
+    "wires": []
+  },
+  {
+    "id": "mciCmd",
+    "type": "mqtt in",
+    "z": "f1",
+    "name": "commands",
+    "topic": "plc/+/cmd",
+    "qos": "1",
+    "datatype": "auto",
+    "broker": "b1",
+    "x": 100,
+    "y": 300,
+    "wires": [
+      [
+        "fnCmd"
+      ]
+    ]
+  },
+  {
+    "id": "fnCmd",
+    "type": "function",
+    "z": "f1",
+    "name": "apply + ack",
+    "func": "const id = (msg.topic || \"\").split(\"/\")[1];\nif (!id) return null;\nlet c = msg.payload;\nif (Buffer.isBuffer(c)) c = c.toString();\ntry { c = typeof c === \"object\" ? c : JSON.parse(c); } catch (e) { return null; }\nif (!c || c.action !== \"write\" || typeof c.target !== \"string\") return null;\nconst key = \"y:\" + id;\nconst ys = flow.get(key) || {};\nys[c.target] = c.value ? 1 : 0;\nflow.set(key, ys);\nreturn {\n  topic: \"plc/\" + id + \"/ack\",\n  qos: 1,\n  payload: {\n    id: c.id || null,\n    device: id,\n    ok: true,\n    ts: Date.now(),\n    target: c.target,\n    value: c.value === undefined ? null : c.value\n  }\n};",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 320,
+    "y": 300,
+    "wires": [
+      [
+        "moA"
+      ]
+    ]
+  },
+  {
+    "id": "moA",
+    "type": "mqtt out",
+    "z": "f1",
+    "name": "publish ack",
+    "topic": "",
+    "qos": "1",
+    "retain": "false",
+    "broker": "b1",
+    "x": 540,
+    "y": 300,
+    "wires": []
+  },
+  {
+    "id": "mciLog",
+    "type": "mqtt in",
+    "z": "f1",
+    "name": "historian",
+    "topic": "plc/+/telemetry",
+    "qos": "1",
+    "datatype": "auto",
+    "broker": "b1",
+    "x": 100,
+    "y": 380,
+    "wires": [
+      [
+        "fnLog"
+      ]
+    ]
+  },
+  {
+    "id": "fnLog",
+    "type": "function",
+    "z": "f1",
+    "name": "csv hourly file",
+    "func": "const HEADER = \"time,device,seq,quality,X0,X1,X2,X3,X4,X5,X6,X7,Y0,Y1,Y2,Y3,Y4,Y5,Y6,Y7,M0,M1,M2,M3,D100,D101,D102\";\nlet p = msg.payload;\nif (Buffer.isBuffer(p)) p = p.toString();\ntry { p = typeof p === \"object\" ? p : JSON.parse(p); } catch (e) { return null; }\nif (!p || typeof p !== \"object\") return null;\nconst id = (msg.topic || \"\").split(\"/\")[1] || p.device || \"\";\nif (!id) return null;\nconst ts = Number(p.ts) || Date.now();\nconst d = new Date(ts);\nconst pad = n => (n < 10 ? \"0\" : \"\") + n;\nconst day = d.getFullYear() + \"-\" + pad(d.getMonth() + 1) + \"-\" + pad(d.getDate());\nconst hour = pad(d.getHours());\nconst name = \"telemetry-\" + day + \"-\" + hour + \".csv\";\nconst time = day + \" \" + hour + \":\" + pad(d.getMinutes()) + \":\" + pad(d.getSeconds()) + \".\" + String(d.getMilliseconds()).padStart(3, \"0\");\nconst bit = v => (v === true || v === 1 || v === \"1\") ? 1 : 0;\nconst num = v => (v === null || v === undefined || v === \"\") ? \"\" : (typeof v === \"number\" ? v : Number(v));\nconst cols = [time, id, num(p.seq), p.quality === undefined || p.quality === null ? \"\" : p.quality];\nfor (let i = 0; i < 8; i++) cols.push(bit(p[\"X\" + i]));\nfor (let i = 0; i < 8; i++) cols.push(bit(p[\"Y\" + i]));\nfor (let i = 0; i < 4; i++) cols.push(bit(p[\"M\" + i]));\ncols.push(num(p.D100), num(p.D101), num(p.D102));\nconst file = \"/logs/\" + name;\ntry {\n  if (!fs.existsSync(file)) fs.writeFileSync(file, HEADER + \"\\n\");\n  fs.appendFileSync(file, cols.join(\",\") + \"\\n\");\n} catch (e) {\n  node.error(\"Ghi CSV thất bại: \" + e.message);\n  return null;\n}\nif (flow.get(\"csvName\") === name) return null;\nflow.set(\"csvName\", name);\nreturn { topic: \"plc/log/file\", payload: { name: name, url: \"/logs/\" + name }, qos: 1, retain: true };",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [
+      {
+        "var": "fs",
+        "module": "fs"
+      }
+    ],
+    "x": 350,
+    "y": 380,
+    "wires": [
+      [
+        "moL"
+      ]
+    ]
+  },
+  {
+    "id": "moL",
+    "type": "mqtt out",
+    "z": "f1",
+    "name": "publish current file",
+    "topic": "",
+    "qos": "1",
+    "retain": "true",
+    "broker": "b1",
+    "x": 590,
+    "y": 380,
+    "wires": []
+  }
+]
